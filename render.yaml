@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: nodejs-hw
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URL
+        sync: false

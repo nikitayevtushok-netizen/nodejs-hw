@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: nodejs-hw-03-validation
+    name: nodejs-hw-04-auth
     runtime: node
     plan: free
-    branch: 03-validation
+    branch: 04-auth
     buildCommand: npm ci
     startCommand: npm start
     envVars:

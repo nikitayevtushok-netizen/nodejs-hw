@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import createHttpError from 'http-errors';
+import { isValidObjectId } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import handlebars from 'handlebars';
 import path from 'node:path';
@@ -22,10 +23,18 @@ export const registerUser = async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const user = await User.create({
-    email,
-    password: hashedPassword,
-  });
+  let user;
+  try {
+    user = await User.create({
+      email,
+      password: hashedPassword,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      throw createHttpError(400, 'Email in use');
+    }
+    throw error;
+  }
 
   const session = await createSession(user._id);
   setSessionCookies(res, session);
@@ -46,7 +55,7 @@ export const loginUser = async (req, res) => {
     throw createHttpError(401, 'Invalid credentials');
   }
 
-  await Session.deleteOne({ userId: user._id });
+  await Session.deleteMany({ userId: user._id });
 
   const session = await createSession(user._id);
   setSessionCookies(res, session);
@@ -56,6 +65,10 @@ export const loginUser = async (req, res) => {
 
 export const refreshUserSession = async (req, res) => {
   const { sessionId, refreshToken } = req.cookies;
+
+  if (!isValidObjectId(sessionId) || !refreshToken) {
+    throw createHttpError(401, 'Session not found');
+  }
 
   const session = await Session.findOne({
     _id: sessionId,
@@ -87,7 +100,7 @@ export const refreshUserSession = async (req, res) => {
 export const logoutUser = async (req, res) => {
   const { sessionId } = req.cookies;
 
-  if (sessionId) {
+  if (isValidObjectId(sessionId)) {
     await Session.deleteOne({ _id: sessionId });
   }
 
